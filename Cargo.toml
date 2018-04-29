@@ -2,7 +2,6 @@
 authors = ["Maikel Wever <maikel@maikelwever.nl>"]
 categories = ["embedded", "hardware-support", "no-std"]
 description = "A platform agnostic driver to interface the nRF24L01 (2.4GHz wireless)"
-documentation = "https://docs.rs/nrf24l01"
 keywords = ["embedded-hal-driver", "nrf24l01", "mirf"]
 license = "MIT"
 name = "nrf24l01"
