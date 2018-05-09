@@ -2,7 +2,8 @@
 # https://github.com/japaric/trust/tree/v0.1.2
 
 language: rust
-services: docker
+rust:
+  - nightly
 
 matrix:
   include:
@@ -12,21 +13,29 @@ matrix:
 
     # Bare metal
     - env: TARGET=thumbv6m-none-eabi
-      rust: nightly
     - env: TARGET=thumbv7m-none-eabi
-      rust: nightly
     - env: TARGET=thumbv7em-none-eabi
-      rust: nightly
     - env: TARGET=thumbv7em-none-eabihf
-      rust: nightly
 
 before_install:
   - set -e
   - rustup self update
 
 install:
-  - sh ci/install.sh
+  - |
+      SYSROOT=$(rustc --print sysroot)
+      if [[ ! "$SYSROOT" =~ "$TARGET" ]]; then
+        rustup target add $TARGET
+      else
+        echo "Target $TARGET is already installed"
+      fi
   - source ~/.cargo/env || true
+
+before_script:
+  - export PATH=$HOME/.cargo/bin:$PATH
+  - cargo install cargo-update || echo "cargo-update already installed"
+  - cargo install cargo-travis || echo "cargo-travis already installed"
+  - cargo install-update -a # update outdated cached binaries
 
 script:
   - bash ci/script.sh
@@ -35,8 +44,6 @@ after_script: set +e
 
 cache:
   cargo: true
-  directories:
-    - $HOME/.xargo
 
 before_cache:
   # Travis can't cache files that are not readable by "others"
