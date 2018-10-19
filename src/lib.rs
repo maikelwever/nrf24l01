@@ -16,7 +16,7 @@ use embedded_hal::blocking;
 use embedded_hal::digital::OutputPin;
 
 mod constants;
-pub use constants::{MIRF_CONFIG, MIRF_ADDR_LEN, Memory, BitMnemonic, Instruction};
+pub use crate::constants::{MIRF_CONFIG, MIRF_ADDR_LEN, Memory, BitMnemonic, Instruction};
 
 
 /// SPI mode
