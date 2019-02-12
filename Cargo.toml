@@ -7,6 +7,7 @@ license = "MIT"
 name = "nrf24l01"
 repository = "https://github.com/maikelwever/nrf24l01"
 version = "0.0.1"
+edition = "2018"
 
 [dependencies]
-embedded-hal = "0.1"
+embedded-hal = "0.2.2"
