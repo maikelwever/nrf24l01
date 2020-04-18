@@ -53,7 +53,7 @@ where
     CSN: OutputPin,
     CE: OutputPin,
 {
-    pub fn new(spi: SPI, csn: CSN, ce: CE, channel: u8, payload_size: u8) -> Result<Self, E> {
+    pub fn new(spi: SPI, csn: CSN, ce: CE, channel: u8, payload_size: u8) -> Result<Self, Error<E>> {
         let mut nrf24l01 = NRF24L01 {
             spi,
             csn,
@@ -70,7 +70,7 @@ where
         Ok(nrf24l01)
     }
 
-    pub fn config(&mut self) -> Result<(), E> {
+    pub fn config(&mut self) -> Result<(), Error<E>> {
         // This was done in the python version but not the C version.
         // Seems to work without it so leave this be commented.
         // nrf24l01.power_down()?;
@@ -87,7 +87,7 @@ where
         Ok(())
     }
 
-    fn config_register(&mut self, register: u8, value: &u8) -> Result<(), E> {
+    fn config_register(&mut self, register: u8, value: &u8) -> Result<(), Error<E>> {
         let _ = self.csn.set_low();
         self.spi
             .write(&[Instruction::W_REGISTER | (Instruction::REGISTER_MASK & register)])?;
@@ -96,7 +96,7 @@ where
         Ok(())
     }
 
-    fn read_register(&mut self, register: u8) -> Result<u8, E> {
+    fn read_register(&mut self, register: u8) -> Result<u8, Error<E>> {
         let _ = self.csn.set_low();
         self.spi
             .write(&[Instruction::R_REGISTER | (Instruction::REGISTER_MASK & register)])?;
@@ -106,7 +106,7 @@ where
         Ok(buffer[0])
     }
 
-    fn write_register(&mut self, register: u8, value: &[u8]) -> Result<(), E> {
+    fn write_register(&mut self, register: u8, value: &[u8]) -> Result<(), Error<E>> {
         let _ = self.csn.set_low();
 
         self.spi
@@ -116,13 +116,13 @@ where
         Ok(())
     }
 
-    pub fn power_down(&mut self) -> Result<(), E> {
+    pub fn power_down(&mut self) -> Result<(), Error<E>> {
         let _ = self.ce.set_low();
         self.config_register(Memory::CONFIG, &MIRF_CONFIG)?;
         Ok(())
     }
 
-    fn power_up_rx(&mut self) -> Result<(), E> {
+    fn power_up_rx(&mut self) -> Result<(), Error<E>> {
         self.tx_power_status = false;
         let _ = self.ce.set_low();
         self.config_register(
@@ -137,7 +137,7 @@ where
         Ok(())
     }
 
-    fn power_up_tx(&mut self) -> Result<(), E> {
+    fn power_up_tx(&mut self) -> Result<(), Error<E>> {
         self.tx_power_status = true;
         self.config_register(
             Memory::CONFIG,
@@ -146,7 +146,7 @@ where
         Ok(())
     }
 
-    fn flush_rx(&mut self) -> Result<(), E> {
+    fn flush_rx(&mut self) -> Result<(), Error<E>> {
         let _ = self.csn.set_low();
         self.spi.write(&[Instruction::FLUSH_RX])?;
         let _ = self.csn.set_high();
@@ -157,25 +157,25 @@ where
         (self.spi, self.csn, self.ce)
     }
 
-    pub fn set_raddr(&mut self, addr: &[u8]) -> Result<(), E> {
+    pub fn set_raddr(&mut self, addr: &[u8]) -> Result<(), Error<E>> {
         let _ = self.ce.set_low();
         self.write_register(Memory::RX_ADDR_P1, addr)?;
         let _ = self.ce.set_high();
         Ok(())
     }
 
-    pub fn set_taddr(&mut self, addr: &[u8]) -> Result<(), E> {
+    pub fn set_taddr(&mut self, addr: &[u8]) -> Result<(), Error<E>> {
         self.write_register(Memory::RX_ADDR_P0, addr)?;
         self.write_register(Memory::TX_ADDR, addr)?;
         Ok(())
     }
 
-    pub fn get_status(&mut self) -> Result<u8, E> {
+    pub fn get_status(&mut self) -> Result<u8, Error<E>> {
         let response = self.read_register(Memory::STATUS)?;
         Ok(response)
     }
 
-    pub fn send(&mut self, data: &[u8]) -> Result<(), E> {
+    pub fn send(&mut self, data: &[u8]) -> Result<(), Error<E>> {
         let _ = self.get_status()?; // I'm not entirely sure why, but Mirf does this, so we do as well.
         while self.tx_power_status {
             let status = self.get_status()?;
@@ -201,7 +201,7 @@ where
         Ok(())
     }
 
-    pub fn is_sending(&mut self) -> Result<bool, E> {
+    pub fn is_sending(&mut self) -> Result<bool, Error<E>> {
         if self.tx_power_status {
             let status = self.get_status()?;
             if (status & ((1 << BitMnemonic::TX_DS) | (1 << BitMnemonic::MAX_RT))) != 0 {
@@ -214,7 +214,7 @@ where
         Ok(false)
     }
 
-    pub fn data_ready(&mut self) -> Result<bool, E> {
+    pub fn data_ready(&mut self) -> Result<bool, Error<E>> {
         let status = self.get_status()?;
         if (status & (1 << BitMnemonic::RX_DR)) != 0 {
             return Ok(true);
@@ -223,7 +223,7 @@ where
         Ok(!fifo_empty)
     }
 
-    fn rx_fifo_empty(&mut self) -> Result<bool, E> {
+    fn rx_fifo_empty(&mut self) -> Result<bool, Error<E>> {
         let fifo_status = self.read_register(Memory::FIFO_STATUS)?;
         if fifo_status & (1 << BitMnemonic::RX_EMPTY) != 0 {
             return Ok(true);
@@ -231,7 +231,7 @@ where
         Ok(false)
     }
 
-    pub fn get_data(&mut self, buf: &mut [u8]) -> Result<(), E> {
+    pub fn get_data(&mut self, buf: &mut [u8]) -> Result<(), Error<E>> {
         let _ = self.csn.set_low();
         self.spi.write(&[Instruction::R_RX_PAYLOAD])?;
         self.spi.transfer(buf)?;
