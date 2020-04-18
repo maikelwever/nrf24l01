@@ -5,7 +5,6 @@
 //! [`embedded-hal`]: https://docs.rs/embedded-hal/~0.1
 
 #![deny(unsafe_code)]
-#![deny(warnings)]
 #![no_std]
 
 extern crate embedded_hal;
