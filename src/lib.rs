@@ -10,7 +10,7 @@
 extern crate embedded_hal;
 
 use embedded_hal::blocking;
-use embedded_hal::digital::OutputPin;
+use embedded_hal::digital::v2::OutputPin;
 use embedded_hal::spi::{Mode, Phase, Polarity};
 
 mod constants;
@@ -64,8 +64,8 @@ where
             tx_power_status: false,
         };
 
-        nrf24l01.ce.set_low();
-        nrf24l01.csn.set_high();
+        let _ = nrf24l01.ce.set_low();
+        let _ = nrf24l01.csn.set_high();
 
         Ok(nrf24l01)
     }
@@ -88,48 +88,48 @@ where
     }
 
     fn config_register(&mut self, register: u8, value: &u8) -> Result<(), E> {
-        self.csn.set_low();
+        let _ = self.csn.set_low();
         self.spi
             .write(&[Instruction::W_REGISTER | (Instruction::REGISTER_MASK & register)])?;
         self.spi.write(&[*value])?;
-        self.csn.set_high();
+        let _ = self.csn.set_high();
         Ok(())
     }
 
     fn read_register(&mut self, register: u8) -> Result<u8, E> {
-        self.csn.set_low();
+        let _ = self.csn.set_low();
         self.spi
             .write(&[Instruction::R_REGISTER | (Instruction::REGISTER_MASK & register)])?;
         let mut buffer = [0];
         self.spi.transfer(&mut buffer)?;
-        self.csn.set_high();
+        let _ = self.csn.set_high();
         Ok(buffer[0])
     }
 
     fn write_register(&mut self, register: u8, value: &[u8]) -> Result<(), E> {
-        self.csn.set_low();
+        let _ = self.csn.set_low();
 
         self.spi
             .write(&[Instruction::W_REGISTER | (Instruction::REGISTER_MASK & register)])?;
         self.spi.write(value)?;
-        self.csn.set_high();
+        let _ = self.csn.set_high();
         Ok(())
     }
 
     pub fn power_down(&mut self) -> Result<(), E> {
-        self.ce.set_low();
+        let _ = self.ce.set_low();
         self.config_register(Memory::CONFIG, &MIRF_CONFIG)?;
         Ok(())
     }
 
     fn power_up_rx(&mut self) -> Result<(), E> {
         self.tx_power_status = false;
-        self.ce.set_low();
+        let _ = self.ce.set_low();
         self.config_register(
             Memory::CONFIG,
             &(MIRF_CONFIG | ((1 << BitMnemonic::PWR_UP) | (1 << BitMnemonic::PRIM_RX))),
         )?;
-        self.ce.set_high();
+        let _ = self.ce.set_high();
         self.config_register(
             Memory::STATUS,
             &((1 << BitMnemonic::TX_DS) | (1 << BitMnemonic::MAX_RT)),
@@ -147,9 +147,9 @@ where
     }
 
     fn flush_rx(&mut self) -> Result<(), E> {
-        self.csn.set_low();
+        let _ = self.csn.set_low();
         self.spi.write(&[Instruction::FLUSH_RX])?;
-        self.csn.set_high();
+        let _ = self.csn.set_high();
         Ok(())
     }
 
@@ -158,9 +158,9 @@ where
     }
 
     pub fn set_raddr(&mut self, addr: &[u8]) -> Result<(), E> {
-        self.ce.set_low();
+        let _ = self.ce.set_low();
         self.write_register(Memory::RX_ADDR_P1, addr)?;
-        self.ce.set_high();
+        let _ = self.ce.set_high();
         Ok(())
     }
 
@@ -185,19 +185,19 @@ where
             }
         }
 
-        self.ce.set_low();
+        let _ = self.ce.set_low();
         self.power_up_tx()?;
 
-        self.csn.set_low();
+        let _ = self.csn.set_low();
         self.spi.write(&[Instruction::FLUSH_TX])?;
-        self.csn.set_high();
+        let _ = self.csn.set_high();
 
-        self.csn.set_low();
+        let _ = self.csn.set_low();
         self.spi.write(&[Instruction::W_TX_PAYLOAD])?;
         self.spi.write(data)?;
-        self.csn.set_high();
+        let _ = self.csn.set_high();
 
-        self.ce.set_high();
+        let _ = self.ce.set_high();
         Ok(())
     }
 
@@ -232,10 +232,10 @@ where
     }
 
     pub fn get_data(&mut self, buf: &mut [u8]) -> Result<(), E> {
-        self.csn.set_low();
+        let _ = self.csn.set_low();
         self.spi.write(&[Instruction::R_RX_PAYLOAD])?;
         self.spi.transfer(buf)?;
-        self.csn.set_high();
+        let _ = self.csn.set_high();
         self.config_register(Memory::STATUS, &(1 << BitMnemonic::RX_DR))?;
         Ok(())
     }
