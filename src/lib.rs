@@ -29,6 +29,8 @@ pub enum Error<E> {
     LateCollision,
     /// SPI error
     Spi(E),
+    /// GPIO read/write error
+    Gpio,
 }
 
 impl<E> From<E> for Error<E> {
@@ -64,8 +66,8 @@ where
             tx_power_status: false,
         };
 
-        let _ = nrf24l01.ce.set_low();
-        let _ = nrf24l01.csn.set_high();
+        nrf24l01.ce.set_low().map_err(|_| Error::Gpio)?;
+        nrf24l01.csn.set_high().map_err(|_| Error::Gpio)?;
 
         Ok(nrf24l01)
     }
@@ -88,48 +90,48 @@ where
     }
 
     fn config_register(&mut self, register: u8, value: &u8) -> Result<(), Error<E>> {
-        let _ = self.csn.set_low();
+        self.csn.set_low().map_err(|_| Error::Gpio)?;
         self.spi
             .write(&[Instruction::W_REGISTER | (Instruction::REGISTER_MASK & register)])?;
         self.spi.write(&[*value])?;
-        let _ = self.csn.set_high();
+        self.csn.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
     }
 
     fn read_register(&mut self, register: u8) -> Result<u8, Error<E>> {
-        let _ = self.csn.set_low();
+        self.csn.set_low().map_err(|_| Error::Gpio)?;
         self.spi
             .write(&[Instruction::R_REGISTER | (Instruction::REGISTER_MASK & register)])?;
         let mut buffer = [0];
         self.spi.transfer(&mut buffer)?;
-        let _ = self.csn.set_high();
+        self.csn.set_high().map_err(|_| Error::Gpio)?;
         Ok(buffer[0])
     }
 
     fn write_register(&mut self, register: u8, value: &[u8]) -> Result<(), Error<E>> {
-        let _ = self.csn.set_low();
+        self.csn.set_low().map_err(|_| Error::Gpio)?;
 
         self.spi
             .write(&[Instruction::W_REGISTER | (Instruction::REGISTER_MASK & register)])?;
         self.spi.write(value)?;
-        let _ = self.csn.set_high();
+        self.csn.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
     }
 
     pub fn power_down(&mut self) -> Result<(), Error<E>> {
-        let _ = self.ce.set_low();
+        self.ce.set_low().map_err(|_| Error::Gpio)?;
         self.config_register(Memory::CONFIG, &MIRF_CONFIG)?;
         Ok(())
     }
 
     fn power_up_rx(&mut self) -> Result<(), Error<E>> {
         self.tx_power_status = false;
-        let _ = self.ce.set_low();
+        self.ce.set_low().map_err(|_| Error::Gpio)?;
         self.config_register(
             Memory::CONFIG,
             &(MIRF_CONFIG | ((1 << BitMnemonic::PWR_UP) | (1 << BitMnemonic::PRIM_RX))),
         )?;
-        let _ = self.ce.set_high();
+        self.ce.set_high().map_err(|_| Error::Gpio)?;
         self.config_register(
             Memory::STATUS,
             &((1 << BitMnemonic::TX_DS) | (1 << BitMnemonic::MAX_RT)),
@@ -147,9 +149,9 @@ where
     }
 
     fn flush_rx(&mut self) -> Result<(), Error<E>> {
-        let _ = self.csn.set_low();
+        self.csn.set_low().map_err(|_| Error::Gpio)?;
         self.spi.write(&[Instruction::FLUSH_RX])?;
-        let _ = self.csn.set_high();
+        self.csn.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
     }
 
@@ -158,9 +160,9 @@ where
     }
 
     pub fn set_raddr(&mut self, addr: &[u8]) -> Result<(), Error<E>> {
-        let _ = self.ce.set_low();
+        self.ce.set_low().map_err(|_| Error::Gpio)?;
         self.write_register(Memory::RX_ADDR_P1, addr)?;
-        let _ = self.ce.set_high();
+        self.ce.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
     }
 
@@ -185,19 +187,19 @@ where
             }
         }
 
-        let _ = self.ce.set_low();
+        self.ce.set_low().map_err(|_| Error::Gpio)?;
         self.power_up_tx()?;
 
-        let _ = self.csn.set_low();
+        self.csn.set_low().map_err(|_| Error::Gpio)?;
         self.spi.write(&[Instruction::FLUSH_TX])?;
-        let _ = self.csn.set_high();
+        self.csn.set_high().map_err(|_| Error::Gpio)?;
 
-        let _ = self.csn.set_low();
+        self.csn.set_low().map_err(|_| Error::Gpio)?;
         self.spi.write(&[Instruction::W_TX_PAYLOAD])?;
         self.spi.write(data)?;
-        let _ = self.csn.set_high();
+        self.csn.set_high().map_err(|_| Error::Gpio)?;
 
-        let _ = self.ce.set_high();
+        self.ce.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
     }
 
@@ -232,10 +234,10 @@ where
     }
 
     pub fn get_data(&mut self, buf: &mut [u8]) -> Result<(), Error<E>> {
-        let _ = self.csn.set_low();
+        self.csn.set_low().map_err(|_| Error::Gpio)?;
         self.spi.write(&[Instruction::R_RX_PAYLOAD])?;
         self.spi.transfer(buf)?;
-        let _ = self.csn.set_high();
+        self.csn.set_high().map_err(|_| Error::Gpio)?;
         self.config_register(Memory::STATUS, &(1 << BitMnemonic::RX_DR))?;
         Ok(())
     }
