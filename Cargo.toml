@@ -6,7 +6,7 @@ keywords = ["embedded-hal-driver", "nrf24l01", "mirf"]
 license = "MIT"
 name = "nrf24l01"
 repository = "https://github.com/maikelwever/nrf24l01"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2018"
 
 [dependencies]
